@@ -1,0 +1,29 @@
+{
+  "name": "movie-server",
+  "version": "0.0.1",
+  "description": "a nodejs webServer",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "]"
+  },
+  "keywords": [
+    "nodejs",
+    "express"
+  ],
+  "author": "rossroma",
+  "license": "MIT",
+  "dependencies": {
+    "body-parser": "^1.15.2",
+    "express": "^4.14.0",
+    "multer": "^1.2.0",
+    "promise": "^7.1.1",
+    "qiniu": "^6.1.13",
+    "request": "^2.76.0",
+    "unirest": "^0.5.1"
+  }
+}
