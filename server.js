@@ -1,6 +1,7 @@
 var express = require('express');
 var app = express();
 var fs = require("fs");
+var qn = require("./qn")
 
 var bodyParser = require('body-parser');
 var multer  = require('multer');
@@ -9,7 +10,7 @@ var restful = require('./client')
 
 app.use(express.static('public'));
 app.use(bodyParser.urlencoded({ extended: false }));
-app.use(multer({ storage: storage}).single('image'));
+app.use(multer({ storage: storage}).single('file'));
 
 app.get('/index.html', function (req, res) {
    res.sendFile( __dirname + "/" + "index.html" );
@@ -20,6 +21,7 @@ app.post('/file_upload', function (req, res) {
 
    console.log(req.file);  // 上传的文件信息
    var upBuffer = req.file.buffer
+   qn.uploadFile(res, upBuffer)
 
 })
 
