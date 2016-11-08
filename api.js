@@ -9,6 +9,7 @@ var qn = require('./qn')
 var qiniu = require("qiniu")
 
 app.use(bodyParser.json())
+app.use(express.static('dist'))
 app.use(multer({ storage: storage}).single('file'))
 
 
@@ -233,7 +234,13 @@ app.get('/rate/:objid', function (req, res) {
 	})
 })
 
-var server = app.listen(8888, function () {
+// 映射到首页
+app.get('/', function (req, res) {
+   res.sendFile( __dirname + "/" + "index.html" );
+})
+
+
+var server = app.listen(80, function () {
 
   var host = server.address().address
   var port = server.address().port
