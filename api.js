@@ -60,7 +60,7 @@ function upMovie (res, url, body) {
 	// console.log(body.movie)
 	request(options, function (error, response, body2) {
 	  if (error) throw new Error(error)
-	  var picBody = {movie:{__type:"Pointer",className:"movie",objectId:body2.objectId},images:body.picture,rating:{average:0,stars:0,total:0},status:0}
+	  var picBody = {movie:{__type:"Pointer",className:"movie",objectId:body2.objectId},images:body.picture,rating:{average:0,stars:0,total:0},status:2}
 		console.log(JSON.stringify(picBody))
 	  restful2 (res, 'picture', 'POST', picBody)
 	})
@@ -139,7 +139,7 @@ app.get('/getCount', function (req, res) {
 // 查询剧照列表
 app.get('/picture', function (req, res) {
 	// console.log(req.query.page)
-	restful (res, 'picture?where=%7B%22status%22:0%7D&limit=15&count=1&skip=' + req.query.page)
+	restful (res, 'picture?where=%7B%22status%22:'+req.query.status+'%7D&limit=15&count=1&skip=' + req.query.page)
 })
 
 // 查询指定id剧照
@@ -162,11 +162,13 @@ app.get('/rd-pic', function (req, res) {
 	restful (res, 'picture?where=%7B%22status%22:0%7D&include=movie&limit=1&skip=' + rdNum)
 })
 
-// 删除剧照
+// 删除&审核剧照
 app.get('/delPicture/:objid', function (req, res) {
+	console.log(req.query.status)
+	var status = Number(req.query.status)
 	var arrId = req.params.objid.split(',')
 	for (var i in arrId) {
-		restful2 (res, 'picture/' + arrId[i], 'PUT', {status: 1})
+		restful2 (res, 'picture/' + arrId[i], 'PUT', {status: status})
 	}
 })
 
