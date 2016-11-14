@@ -236,6 +236,15 @@ app.get('/rate/:objid', function (req, res) {
 	})
 })
 
+// 验证登录
+app.post('/login', function (req, res) {
+  if (req.body.pwd === 'rossroma') {
+  	res.end('true')
+  } else {
+  	res.end('false')
+  }
+})
+
 // 映射到首页
 app.get('/', function (req, res) {
    res.sendFile( __dirname + "/" + "index.html" );
