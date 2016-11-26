@@ -4,6 +4,8 @@ var request = require('request')
 var multer = require('multer')
 var storage = multer.memoryStorage()
 var bodyParser = require('body-parser')
+var session = require('express-session')
+var cookieParser = require('cookie-parser')
 var Until = require('./until')
 var qn = require('./qn')
 var qiniu = require("qiniu")
@@ -11,9 +13,16 @@ var qiniu = require("qiniu")
 app.use(bodyParser.json())
 app.use(express.static('dist'))
 app.use(multer({ storage: storage}).single('file'))
-
+app.use(cookieParser())
+app.use(session({
+  secret: 'guessmovie',
+  cookie: {maxAge: 3600000},
+  resave: false,
+  saveUninitialized: true
+}))
 
 var apiUrl = 'https://api.bmob.cn/1/classes/'
+var apiUser = 'https://api.bmob.cn/1/'
 var headerText = {
   'content-type': 'application/json',
   'x-bmob-rest-api-key': '8a3d04621f341624f41a5db35d688abd',
@@ -48,8 +57,27 @@ function restful2 (res, url, methType, body) {
 	})
 }
 
+// 处理用户表
+function users (res, req, url) {
+	var options = {
+		method: 'GET',
+	  url: apiUser + url,
+	  headers: headerText
+	}
+	request(options, function (error, response, body) {
+	  if (error) throw new Error(error)
+	  var data = JSON.parse(body)
+		if (!JSON.parse(body).error) {
+			// 将objectId存入session	
+			req.session.name = data.objectId			
+			console.log(req.session)
+		}
+		res.end(body)
+	})
+}
+
 // 处理 新增电影请求
-function upMovie (res, url, body) {
+function upMovie (req, res, url, body) {
 	var options = { 
 		method: 'POST',
 	  url: apiUrl + url,
@@ -57,10 +85,16 @@ function upMovie (res, url, body) {
 	  body: body.movie,
 	  json: true 
 	}
+	// 如用户为登录状态，则加入用户信息
+	var user = {}
+	var status = loginStatus(req)
+	if (status) {
+		user = {__type:"Pointer",className:"_User",objectId:status}
+	}	
 	// console.log(body.movie)
 	request(options, function (error, response, body2) {
 	  if (error) throw new Error(error)
-	  var picBody = {movie:{__type:"Pointer",className:"movie",objectId:body2.objectId},images:body.picture,rating:{average:0,stars:0,total:0},status:2}
+	  var picBody = {movie:{__type:"Pointer",className:"movie",objectId:body2.objectId},user:user,images:body.picture,rating:{average:0,stars:0,total:0},status:2}
 		console.log(JSON.stringify(picBody))
 	  restful2 (res, 'picture', 'POST', picBody)
 	})
@@ -73,6 +107,15 @@ function getMovie (res, id) {
 	    res.end(body)
 	  }
 	})
+}
+
+// 判断用户的登录状态
+function loginStatus (req) {
+	if (req.session.name) {
+		return (req.session.name)
+	} else {
+		return false
+	}
 }
 
 // 豆瓣搜索结果api
@@ -103,13 +146,17 @@ app.get('/exist', function (req, res) {
 
 // 新增电影
 app.post('/addMovie', function (req, res) {
-	// console.log(req.body)
-	upMovie(res, 'movie', req.body)
+	upMovie(req, res, 'movie', req.body)
 })
 
 // 新增剧照
 app.post('/addPicture', function (req, res) {
 	// console.log(req.body)
+	var body = req.body
+	var status = loginStatus(req)
+	if (status) {
+		body.user = {__type:"Pointer",className:"_User",objectId:status}
+	}	
 	restful2 (res, 'picture', 'POST', req.body)
 })
 
@@ -133,6 +180,7 @@ app.get('/delMovie/:objid', function (req, res) {
 
 // 查询剧照总数
 app.get('/getCount', function (req, res) {
+	console.log(req.session.name)
 	restful (res, 'picture?where=%7B%22status%22:0%7D&limit=0&count=1')
 })
 
@@ -164,7 +212,7 @@ app.get('/rd-pic', function (req, res) {
 
 // 删除&审核剧照
 app.get('/delPicture/:objid', function (req, res) {
-	console.log(req.query.status)
+	// console.log(req.query.status)
 	var status = Number(req.query.status)
 	var arrId = req.params.objid.split(',')
 	for (var i in arrId) {
@@ -231,18 +279,20 @@ app.get('/rate/:objid', function (req, res) {
 	  if (error) throw new Error(error)
 	 	var objRat = JSON.parse(body).rating
 	  var result = new Until.rating(objRat, rating)
-	  console.log(JSON.stringify(result))
 	  restful2 (res, 'picture/'+req.params.objid, 'PUT', {rating:result})
 	})
 })
 
 // 验证登录
-app.post('/login', function (req, res) {
-  if (req.body.pwd === 'rossroma') {
-  	res.end('true')
-  } else {
-  	res.end('false')
-  }
+app.post('/signin', function (req, res) {
+	console.log(req.body.username)
+	users (res, req, `login/?username=${req.body.username}&password=${req.body.password}`)
+})
+
+// 查询登录状态
+app.get('/loginstatus', function (req, res) {
+	var data = JSON.stringify(loginStatus(req))
+	res.end(data)
 })
 
 // 映射到首页
