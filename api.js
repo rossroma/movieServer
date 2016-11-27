@@ -16,7 +16,7 @@ app.use(multer({ storage: storage}).single('file'))
 app.use(cookieParser())
 app.use(session({
   secret: 'guessmovie',
-  cookie: {maxAge: 3600000},
+  cookie: {maxAge: 36000000},
   resave: false,
   saveUninitialized: true
 }))
@@ -54,25 +54,6 @@ function restful2 (res, url, methType, body) {
 	request(options, function (error, response, body) {
 	  if (error) throw new Error(error)	  
 	  res.end(JSON.stringify(body))
-	})
-}
-
-// 处理用户表
-function users (res, req, url) {
-	var options = {
-		method: 'GET',
-	  url: apiUser + url,
-	  headers: headerText
-	}
-	request(options, function (error, response, body) {
-	  if (error) throw new Error(error)
-	  var data = JSON.parse(body)
-		if (!JSON.parse(body).error) {
-			// 将objectId存入session	
-			req.session.name = data.objectId			
-			console.log(req.session)
-		}
-		res.end(body)
 	})
 }
 
@@ -180,7 +161,7 @@ app.get('/delMovie/:objid', function (req, res) {
 
 // 查询剧照总数
 app.get('/getCount', function (req, res) {
-	console.log(req.session.name)
+	console.log('登录状态：' + req.session.name)
 	restful (res, 'picture?where=%7B%22status%22:0%7D&limit=0&count=1')
 })
 
@@ -283,10 +264,44 @@ app.get('/rate/:objid', function (req, res) {
 	})
 })
 
-// 验证登录
+// 登录
 app.post('/signin', function (req, res) {
-	console.log(req.body.username)
-	users (res, req, `login/?username=${req.body.username}&password=${req.body.password}`)
+	var options = {
+		method: 'GET',
+	  url: apiUser + `login/?username=${req.body.username}&password=${req.body.password}`,
+	  headers: headerText
+	}
+	request(options, function (error, response, body) {
+	  if (error) throw new Error(error)
+	  var data = JSON.parse(body)
+		if (!JSON.parse(body).error) {
+			// 将objectId存入session	
+			req.session.name = data.objectId			
+			console.log(req.session)
+		}
+		res.end(body)
+	})
+})
+
+// 注册
+app.post('/register', function (req, res) {
+	console.log(req.body)
+	var options = { 
+		method: 'POST',
+	  url: apiUser + 'users',
+	  headers: headerText,
+	  body: req.body,
+	  json: true 
+	}
+	request(options, function (error, response, body) {
+	  if (error) throw new Error(error)	
+		if (!body.error) {
+			// 将objectId存入session	
+			req.session.name = body.objectId			
+			console.log(req.session)
+		}
+	  res.end(JSON.stringify(body))
+	})
 })
 
 // 查询登录状态
