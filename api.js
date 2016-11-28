@@ -168,7 +168,11 @@ app.get('/getCount', function (req, res) {
 // 查询剧照列表
 app.get('/picture', function (req, res) {
 	// console.log(req.query.page)
-	restful (res, 'picture?where=%7B%22status%22:'+req.query.status+'%7D&limit=15&count=1&skip=' + req.query.page)
+	if (req.query.user) {
+		restful (res, 'picture?where=%7B%22user%22:%22'+req.query.user+'%22%7D&limit=15&count=1&skip=' + req.query.page)
+	} else {
+		restful (res, 'picture?where=%7B%22status%22:'+req.query.status+'%7D&limit=15&count=1&skip=' + req.query.page)
+	}
 })
 
 // 查询指定id剧照
@@ -308,6 +312,19 @@ app.post('/register', function (req, res) {
 app.get('/loginstatus', function (req, res) {
 	var data = JSON.stringify(loginStatus(req))
 	res.end(data)
+})
+
+// 查询用户信息
+app.get('/getuser', function (req, res) {
+	var options = {
+		method: 'GET',
+	  url: apiUser + 'users/2xSNIIIm',
+	  headers: headerText
+	}
+	request(options, function (error, response, body) {
+	  if (error) throw new Error(error)
+		res.end(body)
+	})
 })
 
 // 映射到首页
