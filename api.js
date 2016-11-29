@@ -70,7 +70,7 @@ function upMovie (req, res, url, body) {
 	var user = {}
 	var status = loginStatus(req)
 	if (status) {
-		user = {__type:"Pointer",className:"_User",objectId:status}
+		user = {__type:"Pointer",className:"_User",objectId:status.obid}
 	}	
 	// console.log(body.movie)
 	request(options, function (error, response, body2) {
@@ -92,8 +92,8 @@ function getMovie (res, id) {
 
 // 判断用户的登录状态
 function loginStatus (req) {
-	if (req.session.name) {
-		return (req.session.name)
+	if (req.session.obid) {
+		return (req.session)
 	} else {
 		return false
 	}
@@ -136,7 +136,7 @@ app.post('/addPicture', function (req, res) {
 	var body = req.body
 	var status = loginStatus(req)
 	if (status) {
-		body.user = {__type:"Pointer",className:"_User",objectId:status}
+		body.user = {__type:"Pointer",className:"_User",objectId:status.obid}
 	}	
 	restful2 (res, 'picture', 'POST', req.body)
 })
@@ -161,7 +161,7 @@ app.get('/delMovie/:objid', function (req, res) {
 
 // 查询剧照总数
 app.get('/getCount', function (req, res) {
-	console.log('登录状态：' + req.session.name)
+	console.log('登录状态：' + req.session.obid)
 	restful (res, 'picture?where=%7B%22status%22:0%7D&limit=0&count=1')
 })
 
@@ -280,7 +280,9 @@ app.post('/signin', function (req, res) {
 	  var data = JSON.parse(body)
 		if (!JSON.parse(body).error) {
 			// 将objectId存入session	
-			req.session.name = data.objectId			
+			req.session.name = data.username
+			req.session.obid = data.objectId
+			req.session.token = data.sessionToken
 			console.log(req.session)
 		}
 		res.end(body)
@@ -300,8 +302,6 @@ app.post('/register', function (req, res) {
 	request(options, function (error, response, body) {
 	  if (error) throw new Error(error)	
 		if (!body.error) {
-			// 将objectId存入session	
-			req.session.name = body.objectId			
 			console.log(req.session)
 		}
 	  res.end(JSON.stringify(body))
@@ -318,7 +318,7 @@ app.get('/loginstatus', function (req, res) {
 app.get('/getuser', function (req, res) {
 	var options = {
 		method: 'GET',
-	  url: apiUser + 'users/2xSNIIIm',
+	  url: apiUser + 'users/'+req.query.id,
 	  headers: headerText
 	}
 	request(options, function (error, response, body) {
@@ -326,6 +326,43 @@ app.get('/getuser', function (req, res) {
 		res.end(body)
 	})
 })
+
+// 退出登录
+app.get('/quit', function (req, res) {
+	req.session.destroy(function (err) {
+		if (err) throw new Error(err)
+		var data = JSON.stringify('success')
+		res.end(data)
+	})
+})
+
+//记录游戏数据
+app.get('/gamelog/:objid', function (req, res) {
+	let data = {}	
+	let headerText2 = {}
+	if (req.query.result === 'right') {
+		data = {right:{'__op':'Increment','amount':1}}
+	} else {
+		console.log(req.query.result)
+		data = {wrong:{'__op':'Increment','amount':1}}
+	}
+	headerText2['x-bmob-rest-api-key'] = headerText['x-bmob-rest-api-key']
+	headerText2['x-bmob-application-id'] = headerText['x-bmob-application-id']
+	headerText2['content-type'] = 'application/json'
+	headerText2['x-bmob-session-token'] = req.session.token
+	var options = {
+		method: 'PUT',
+	  url: apiUser + 'users/' + req.params.objid,
+	  headers: headerText2,
+	  body: data,
+	  json: true 
+	}
+	request(options, function (error, response, body) {
+	  if (error) throw new Error(error)
+	 	res.end(JSON.stringify(body))
+	})
+})
+
 
 // 映射到首页
 app.get('/', function (req, res) {
