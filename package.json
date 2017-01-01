@@ -2,10 +2,10 @@
   "name": "movie-server",
   "version": "0.0.1",
   "description": "a nodejs webServer",
-  "main": "server.js",
+  "main": "api.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node api.js"
   },
   "repository": {
     "type": "git",
@@ -16,15 +16,5 @@
     "express"
   ],
   "author": "rossroma",
-  "license": "MIT",
-  "dependencies": {
-    "body-parser": "^1.15.2",
-    "cookie-parser": "^1.4.3",
-    "express": "^4.14.0",
-    "express-session": "^1.14.2",
-    "multer": "^1.2.0",
-    "promise": "^7.1.1",
-    "qiniu": "^6.1.13",
-    "request": "^2.76.0"
-  }
+  "license": "MIT"
 }

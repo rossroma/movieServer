@@ -11,7 +11,7 @@ var qn = require('./qn')
 var qiniu = require("qiniu")
 
 app.use(bodyParser.json())
-app.use(express.static('dist'))
+app.use(express.static('movieServer/dist'))
 app.use(multer({ storage: storage}).single('file'))
 app.use(cookieParser())
 app.use(session({
@@ -44,12 +44,12 @@ function restful (res, url) {
 
 // 处理 PUT 或 POST 请求
 function restful2 (res, url, methType, body) {
-	var options = { 
+	var options = {
 		method: methType,
 	  url: apiUrl + url,
 	  headers: headerText,
 	  body: body,
-	  json: true 
+	  json: true
 	}
 	request(options, function (error, response, body) {
 	  if (error) throw new Error(error)
@@ -60,12 +60,12 @@ function restful2 (res, url, methType, body) {
 
 // 处理 新增电影请求
 function upMovie (req, res, url, body) {
-	var options = { 
+	var options = {
 		method: 'POST',
 	  url: apiUrl + url,
 	  headers: headerText,
 	  body: body.movie,
-	  json: true 
+	  json: true
 	}
 	// 如用户为登录状态，则加入用户信息
 	var user = {__type:"Pointer",className:"_User",objectId:''}
@@ -137,7 +137,7 @@ app.post('/addPicture', function (req, res) {
 	var status = loginStatus(req)
 	if (status) {
 		body.user = {__type:"Pointer",className:"_User",objectId:status.obid}
-	}	
+	}
 	restful2 (res, 'picture', 'POST', req.body)
 })
 
@@ -279,7 +279,7 @@ app.post('/signin', function (req, res) {
 	  if (error) throw new Error(error)
 	  var data = JSON.parse(body)
 		if (!JSON.parse(body).error) {
-			// 将objectId存入session	
+			// 将objectId存入session
 			req.session.name = data.username
 			req.session.obid = data.objectId
 			req.session.token = data.sessionToken
@@ -292,15 +292,15 @@ app.post('/signin', function (req, res) {
 // 注册
 app.post('/register', function (req, res) {
 	console.log(req.body)
-	var options = { 
+	var options = {
 		method: 'POST',
 	  url: apiUser + 'users',
 	  headers: headerText,
 	  body: req.body,
-	  json: true 
+	  json: true
 	}
 	request(options, function (error, response, body) {
-	  if (error) throw new Error(error)	
+	  if (error) throw new Error(error)
 		if (!body.error) {
 			console.log(req.session)
 		}
@@ -338,7 +338,7 @@ app.get('/quit', function (req, res) {
 
 //记录游戏数据
 app.get('/gamelog/:objid', function (req, res) {
-	let data = {}	
+	let data = {}
 	let headerText2 = {}
 	if (req.query.result === 'right') {
 		data = {right:{'__op':'Increment','amount':1}}
@@ -355,7 +355,7 @@ app.get('/gamelog/:objid', function (req, res) {
 	  url: apiUser + 'users/' + req.params.objid,
 	  headers: headerText2,
 	  body: data,
-	  json: true 
+	  json: true
 	}
 	request(options, function (error, response, body) {
 	  if (error) throw new Error(error)
@@ -369,12 +369,4 @@ app.get('/', function (req, res) {
    res.sendFile( __dirname + "/" + "index.html" );
 })
 
-
-var server = app.listen(80, function () {
-
-  var host = server.address().address
-  var port = server.address().port
-
-  console.log("应用实例，访问地址为 http://%s:%s", host, port)
-
-})
+module.exports = app;
