@@ -52,7 +52,8 @@ function restful2 (res, url, methType, body) {
 	  json: true 
 	}
 	request(options, function (error, response, body) {
-	  if (error) throw new Error(error)	  
+	  if (error) throw new Error(error)
+	  if (body.error) throw new Error(body.error)
 	  res.end(JSON.stringify(body))
 	})
 }
@@ -67,16 +68,15 @@ function upMovie (req, res, url, body) {
 	  json: true 
 	}
 	// 如用户为登录状态，则加入用户信息
-	var user = {}
+	var user = {__type:"Pointer",className:"_User",objectId:''}
 	var status = loginStatus(req)
 	if (status) {
-		user = {__type:"Pointer",className:"_User",objectId:status.obid}
-	}	
+		user.objectId = status.obid
+	}
 	// console.log(body.movie)
 	request(options, function (error, response, body2) {
 	  if (error) throw new Error(error)
 	  var picBody = {movie:{__type:"Pointer",className:"movie",objectId:body2.objectId},user:user,images:body.picture,rating:{average:0,stars:0,total:0},status:2}
-		console.log(JSON.stringify(picBody))
 	  restful2 (res, 'picture', 'POST', picBody)
 	})
 }
@@ -185,7 +185,7 @@ randomNum = new Until.randomNum()
 app.get('/rd-pic', function (req, res) {
 	var count = req.query.count
 	var rdNum
-	if (count !== 'undefined') {	
+	if (count !== 'undefined') {
 		rdNum = randomNum.init(count)
 		// console.log('初始化：' + rdNum + '\n')
 	} else {
