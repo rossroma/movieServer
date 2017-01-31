@@ -29,32 +29,43 @@ var headerText = {
   'x-bmob-application-id': '897d8343de907640340fa6b06684b181'
 }
 
-// 处理 GET 请求
-function restful (res, url) {
-	var options = {
-		method: 'GET',
-	  url: apiUrl + url,
-	  headers: headerText
+// 显示错误信息
+function showError (error, bmobError) {
+	if (error) {
+		console.log(`basic error：${error}`)
+		return true
 	}
-	request(options, function (error, response, body) {
-	  if (error) throw new Error(error)
-	  res.end(body)
-	})
+	if (bmobError) {
+		console.log(`bmob  error: ${bmobError}`)
+		return true
+	}
 }
 
-// 处理 PUT 或 POST 请求
-function restful2 (res, url, methType, body) {
+// 判断用户的登录状态
+function loginStatus (req) {
+	if (req.session.obid) {
+		return (req.session)
+	} else {
+		return false
+	}
+}
+
+// 处理ajax请求
+function restful (res, url) {
+	const methType = arguments[2]
+	const body = arguments[3]
 	var options = {
-		method: methType,
+		method: methType || 'GET',
 	  url: apiUrl + url,
 	  headers: headerText,
-	  body: body,
 	  json: true
 	}
-	request(options, function (error, response, body) {
-	  if (error) throw new Error(error)
-	  if (body.error) throw new Error(body.error)
-	  res.end(JSON.stringify(body))
+	if (body) {
+		options.body = body
+	}
+	request(options, function (error, response, data) {
+		if (showError(error, data.error)) return
+	  res.end(JSON.stringify(data))
 	})
 }
 
@@ -74,10 +85,10 @@ function upMovie (req, res, url, body) {
 		user.objectId = status.obid
 	}
 	// console.log(body.movie)
-	request(options, function (error, response, body2) {
-	  if (error) throw new Error(error)
-	  var picBody = {movie:{__type:"Pointer",className:"movie",objectId:body2.objectId},user:user,images:body.picture,rating:{average:0,stars:0,total:0},status:2}
-	  restful2 (res, 'picture', 'POST', picBody)
+	request(options, function (error, response, data) {
+	  if (showError(error, data.error)) return
+	  var picBody = {movie:{__type:"Pointer",className:"movie",objectId:data.objectId},user:user,images:body.picture,rating:{average:0,stars:0,total:0},status:2}
+	  restful (res, 'picture', 'POST', picBody)
 	})
 }
 
@@ -88,15 +99,6 @@ function getMovie (res, id) {
 	    res.end(body)
 	  }
 	})
-}
-
-// 判断用户的登录状态
-function loginStatus (req) {
-	if (req.session.obid) {
-		return (req.session)
-	} else {
-		return false
-	}
 }
 
 // 豆瓣搜索结果api
@@ -138,7 +140,7 @@ app.post('/addPicture', function (req, res) {
 	if (status) {
 		body.user = {__type:"Pointer",className:"_User",objectId:status.obid}
 	}
-	restful2 (res, 'picture', 'POST', req.body)
+	restful (res, 'picture', 'POST', req.body)
 })
 
 // 查询电影列表
@@ -155,13 +157,13 @@ app.get('/movie/:objid', function (req, res) {
 app.get('/delMovie/:objid', function (req, res) {
 	var arrId = req.params.objid.split(',')
 	for (var i in arrId) {
-		restful2 (res, 'movie/' + arrId[i], 'PUT', {status: 1})
+		restful (res, 'movie/' + arrId[i], 'PUT', {status: 1})
 	}
 })
 
 // 查询剧照总数
 app.get('/getCount', function (req, res) {
-	console.log('登录状态：' + req.session.obid)
+	console.log(`登录状态：${req.session.obid ? req.session.obid : '未登录'}`)
 	restful (res, 'picture?where=%7B%22status%22:0%7D&limit=0&count=1')
 })
 
@@ -181,17 +183,8 @@ app.get('/picture/:objid', function (req, res) {
 })
 
 // 随机返回一条剧照
-randomNum = new Until.randomNum()
 app.get('/rd-pic', function (req, res) {
-	var count = req.query.count
-	var rdNum
-	if (count !== 'undefined') {
-		rdNum = randomNum.init(count)
-		// console.log('初始化：' + rdNum + '\n')
-	} else {
-		rdNum = randomNum.sendNum()
-		// console.log('下一题：' + rdNum + '\n')
-	}
+	var rdNum = req.query.rdNum
 	restful (res, 'picture?where=%7B%22status%22:0%7D&include=movie&limit=1&skip=' + rdNum)
 })
 
@@ -201,14 +194,14 @@ app.get('/delPicture/:objid', function (req, res) {
 	var status = Number(req.query.status)
 	var arrId = req.params.objid.split(',')
 	for (var i in arrId) {
-		restful2 (res, 'picture/' + arrId[i], 'PUT', {status: status})
+		restful (res, 'picture/' + arrId[i], 'PUT', {status: status})
 	}
 })
 
 // 喜欢
 app.get('/like/:objid', function (req, res) {
 	var like = req.query.bol ? 'like' : 'unlike'
-	restful2 (res, 'picture/' + req.params.objid, 'PUT', {like:{'__op':'Increment','amount':1}})
+	restful (res, 'picture/' + req.params.objid, 'PUT', {like:{'__op':'Increment','amount':1}})
 })
 
 // 本地图片上传
@@ -241,13 +234,13 @@ app.get('/addErrors', function (req, res) {
 	  headers: headerText
 	}
 	request(options, function (error, response, body) {
-	  if (error) throw new Error(error)
+	  if (showError(error, body.error)) return
 	 	var result = JSON.parse(body).results
 	  // 判断数据是否存在，有则更新，没有则新增
 	  if (result.length) {
-			restful2 (res, 'errors/'+result[0].objectId, 'PUT', {count:{__op:'Increment',amount:1}})
+			restful (res, 'errors/'+result[0].objectId, 'PUT', {count:{__op:'Increment',amount:1}})
 	  } else {
-	  	restful2 (res, 'errors/', 'POST', {picture:{__type:"Pointer",className:"picture",objectId:objectId},count:{__op:'Increment',amount:1}})
+	  	restful (res, 'errors/', 'POST', {picture:{__type:"Pointer",className:"picture",objectId:objectId},count:{__op:'Increment',amount:1}})
 	  }
 	})
 })
@@ -261,10 +254,10 @@ app.get('/rate/:objid', function (req, res) {
 	  headers: headerText
 	}
 	request(options, function (error, response, body) {
-	  if (error) throw new Error(error)
+	  if (showError(error, body.error)) return
 	 	var objRat = JSON.parse(body).rating
 	  var result = new Until.rating(objRat, rating)
-	  restful2 (res, 'picture/'+req.params.objid, 'PUT', {rating:result})
+	  restful (res, 'picture/'+req.params.objid, 'PUT', {rating:result})
 	})
 })
 
@@ -276,7 +269,7 @@ app.post('/signin', function (req, res) {
 	  headers: headerText
 	}
 	request(options, function (error, response, body) {
-	  if (error) throw new Error(error)
+	  if (showError(error, body.error)) return
 	  var data = JSON.parse(body)
 		if (!JSON.parse(body).error) {
 			// 将objectId存入session
@@ -300,7 +293,7 @@ app.post('/register', function (req, res) {
 	  json: true
 	}
 	request(options, function (error, response, body) {
-	  if (error) throw new Error(error)
+	  if (showError(error, body.error)) return
 		if (!body.error) {
 			console.log(req.session)
 		}
@@ -322,7 +315,7 @@ app.get('/getuser', function (req, res) {
 	  headers: headerText
 	}
 	request(options, function (error, response, body) {
-	  if (error) throw new Error(error)
+	  if (showError(error, body.error)) return
 		res.end(body)
 	})
 })
@@ -330,7 +323,7 @@ app.get('/getuser', function (req, res) {
 // 退出登录
 app.get('/quit', function (req, res) {
 	req.session.destroy(function (err) {
-		if (err) throw new Error(err)
+		if (showError(error)) return
 		var data = JSON.stringify('success')
 		res.end(data)
 	})
@@ -358,7 +351,7 @@ app.get('/gamelog/:objid', function (req, res) {
 	  json: true
 	}
 	request(options, function (error, response, body) {
-	  if (error) throw new Error(error)
+	  if (showError(error, body.error)) return
 	 	res.end(JSON.stringify(body))
 	})
 })
