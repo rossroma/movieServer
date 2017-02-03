@@ -1,21 +1,22 @@
 var qiniu = require("qiniu")
 var request = require('request')
+var Conf = require('./conf.js')
 
 //需要填写你的 Access Key 和 Secret Key
-qiniu.conf.ACCESS_KEY = 'kfqZfOlTwhys5WVJxQo4SkRey0IFSsNgYRzaoLEt'
-qiniu.conf.SECRET_KEY = 'a_bOV7yWMKb9ooJj9MARRIhR5WlnLPkVU-NXk-AN'
+qiniu.conf.ACCESS_KEY = Conf.qiniu.accessKey
+qiniu.conf.SECRET_KEY = Conf.qiniu.secretKey
 
 //要上传的空间
-bucket = 'ross'
+bucket = Conf.qiniu.bucket
+
+// 七牛图片域名
+var qn_url = Conf.qiniu.url
 
 // 生成图片名称
 function upkey () {
 	var d = new Date()
 	return 'gm-'+d.getTime()+'.jpg'
 }
-
-// 七牛图片域名
-var qn_url = 'http://ofnd4wjbn.bkt.clouddn.com/'
 
 //在线上传
 exports.fetch = function(res, picUrl) {
@@ -65,8 +66,8 @@ exports.uploadFile = function(res, buffer) {
   qiniu.io.put(token, key, buffer, extra, function(err, ret) {
     if(!err) {
       // 上传成功， 处理返回值
-      console.log(ret.hash, ret.key, ret.persistentId) 
-      res.end(qn_url+ret.key)      
+      console.log(ret.hash, ret.key, ret.persistentId)
+      res.end(qn_url+ret.key)
     } else {
       // 上传失败， 处理返回代码
       console.log(err)

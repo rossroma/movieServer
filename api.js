@@ -8,7 +8,7 @@ var session = require('express-session')
 var cookieParser = require('cookie-parser')
 var Until = require('./until')
 var qn = require('./qn')
-var qiniu = require("qiniu")
+var Conf = require('./conf.js')
 
 app.use(bodyParser.json())
 app.use(express.static('movieServer/dist'))
@@ -23,20 +23,16 @@ app.use(session({
 
 var apiUrl = 'https://api.bmob.cn/1/classes/'
 var apiUser = 'https://api.bmob.cn/1/'
-var headerText = {
-  'content-type': 'application/json',
-  'x-bmob-rest-api-key': '8a3d04621f341624f41a5db35d688abd',
-  'x-bmob-application-id': '897d8343de907640340fa6b06684b181'
-}
+var headerText = Conf.bmob
 
 // 显示错误信息
-function showError (error, bmobError) {
+function showError (error, body) {
 	if (error) {
 		console.log(`basic error：${error}`)
 		return true
 	}
-	if (bmobError) {
-		console.log(`bmob  error: ${bmobError}`)
+	if (body && body.error) {
+		console.log(`bmob  error: ${body.error}`)
 		return true
 	}
 }
@@ -64,7 +60,7 @@ function restful (res, url) {
 		options.body = body
 	}
 	request(options, function (error, response, data) {
-		if (showError(error, data.error)) return
+		if (showError(error, data)) return
 	  res.end(JSON.stringify(data))
 	})
 }
@@ -86,7 +82,7 @@ function upMovie (req, res, url, body) {
 	}
 	// console.log(body.movie)
 	request(options, function (error, response, data) {
-	  if (showError(error, data.error)) return
+	  if (showError(error, data)) return
 	  var picBody = {movie:{__type:"Pointer",className:"movie",objectId:data.objectId},user:user,images:body.picture,rating:{average:0,stars:0,total:0},status:2}
 	  restful (res, 'picture', 'POST', picBody)
 	})
@@ -206,6 +202,7 @@ app.get('/like/:objid', function (req, res) {
 
 // 本地图片上传
 app.post('/upimg', function (req, res) {
+	console.log(req.file)
   var upBuffer = req.file.buffer
   new qn.uploadFile(res, upBuffer)
 })
@@ -234,7 +231,7 @@ app.get('/addErrors', function (req, res) {
 	  headers: headerText
 	}
 	request(options, function (error, response, body) {
-	  if (showError(error, body.error)) return
+	  if (showError(error, body)) return
 	 	var result = JSON.parse(body).results
 	  // 判断数据是否存在，有则更新，没有则新增
 	  if (result.length) {
@@ -254,7 +251,7 @@ app.get('/rate/:objid', function (req, res) {
 	  headers: headerText
 	}
 	request(options, function (error, response, body) {
-	  if (showError(error, body.error)) return
+	  if (showError(error, body)) return
 	 	var objRat = JSON.parse(body).rating
 	  var result = new Until.rating(objRat, rating)
 	  restful (res, 'picture/'+req.params.objid, 'PUT', {rating:result})
@@ -269,7 +266,7 @@ app.post('/signin', function (req, res) {
 	  headers: headerText
 	}
 	request(options, function (error, response, body) {
-	  if (showError(error, body.error)) return
+	  if (showError(error, body)) return
 	  var data = JSON.parse(body)
 		if (!JSON.parse(body).error) {
 			// 将objectId存入session
@@ -293,8 +290,8 @@ app.post('/register', function (req, res) {
 	  json: true
 	}
 	request(options, function (error, response, body) {
-	  if (showError(error, body.error)) return
-		if (!body.error) {
+	  if (showError(error, body)) return
+		if (!body) {
 			console.log(req.session)
 		}
 	  res.end(JSON.stringify(body))
@@ -315,7 +312,7 @@ app.get('/getuser', function (req, res) {
 	  headers: headerText
 	}
 	request(options, function (error, response, body) {
-	  if (showError(error, body.error)) return
+	  if (showError(error, body)) return
 		res.end(body)
 	})
 })
@@ -351,7 +348,7 @@ app.get('/gamelog/:objid', function (req, res) {
 	  json: true
 	}
 	request(options, function (error, response, body) {
-	  if (showError(error, body.error)) return
+	  if (showError(error, body)) return
 	 	res.end(JSON.stringify(body))
 	})
 })
