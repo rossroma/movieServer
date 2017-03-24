@@ -6,7 +6,7 @@ const storage = multer.memoryStorage()
 const bodyParser = require('body-parser')
 const session = require('express-session')
 const cookieParser = require('cookie-parser')
-const Until = require('./until')
+const Utils = require('./utils')
 const qn = require('./qn')
 const Conf = require('./conf.js')
 
@@ -246,7 +246,7 @@ app.get('/rate/:objid', function (req, res) {
 	request(options, function (error, response, body) {
 	  if (showError(error, body)) return
 	 	const objRat = JSON.parse(body).rating
-	  const result = new Until.rating(objRat, rating)
+	  const result = new Utils.rating(objRat, rating)
 	  restful (res, 'picture/' + req.params.objid, 'PUT', {rating:result})
 	})
 })
