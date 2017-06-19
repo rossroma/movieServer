@@ -24,6 +24,7 @@ app.use(session({
 const apiUrl = 'https://api.bmob.cn/1/classes/'
 const apiUser = 'https://api.bmob.cn/1/'
 const headerText = Conf.bmob
+let movie = {} // 报错电影详情
 
 // 显示错误信息
 function showError (error, body) {
@@ -140,6 +141,11 @@ app.get('/movie', function (req, res) {
 	restful (res, 'movie?where=%7B%22status%22:0%7D&limit=15&count=1&skip=' + req.query.page)
 })
 
+// 查询审核
+app.get('/errors', function (req, res) {
+	restful (res, `errors?where=%7B%22status%22:1%7D&limit=15&count=1&skip=${req.query.page}&include=movie`)
+})
+
 // 查询指定id电影
 app.get('/movie/:objid', function (req, res) {
 	restful (res, 'movie/' + req.params.objid)
@@ -176,7 +182,20 @@ app.get('/picture/:objid', function (req, res) {
 // 随机返回一条剧照
 app.get('/rd-pic', function (req, res) {
 	const rdNum = req.query.rdNum
-	restful (res, 'picture?where=%7B%22status%22:0%7D&include=movie&limit=1&skip=' + rdNum)
+	let options = {
+		method: 'GET',
+	  url: apiUrl + `picture?where=%7B%22status%22:0%7D&limit=1&skip=${rdNum}&include=movie`,
+	  headers: headerText,
+	  json: true
+	}
+	request(options, function (error, response, data) {
+		if (showError(error, data)) return
+		data = data.results[0]
+		movie = data.movie
+		let picture = Object.assign(data, {})
+		delete picture.movie
+	  res.end(JSON.stringify(picture))
+	})
 })
 
 // 删除&审核剧照
@@ -185,6 +204,20 @@ app.get('/delPicture/:objid', function (req, res) {
 	const arrId = req.params.objid.split(',')
 	for (let i in arrId) {
 		restful (res, 'picture/' + arrId[i], 'PUT', {status: status})
+	}
+})
+
+// 删除&审核答案
+app.get('/delAnswers/:objid', function (req, res) {
+	const status = Number(req.query.status)
+	const movieId = req.query.movieId
+	const userAnswer = req.query.userAnswer
+	const arrId = req.params.objid.split(',')
+	for (let i in arrId) {
+		restful (res, 'errors/' + arrId[i], 'PUT', {status: status})
+	}
+	if (movieId) {
+		restful(res, `movie/${movieId}`, 'PUT', {answers:{'__op':'AddUnique','objects':[userAnswer]}})
 	}
 })
 
@@ -215,24 +248,11 @@ app.get('/getFilm', function (req, res) {
 	getMovie(res, req.query.id)
 })
 
-// 处理bug反馈
+// 添加答案
 app.get('/addErrors', function (req, res) {
 	const objectId = req.query.objectId
-	const options = {
-		method: 'GET',
-	  url: `${apiUrl}errors/?where=%7B%22movie%22:%22${objectId}%22%7D`,
-	  headers: headerText
-	}
-	request(options, function (error, response, body) {
-	  if (showError(error, body)) return
-	 	const result = JSON.parse(body).results
-	  // 判断数据是否存在，有则更新，没有则新增
-	  if (result.length) {
-			restful (res, 'errors/' + result[0].objectId, 'PUT', {count:{__op:'Increment',amount:1}})
-	  } else {
-	  	restful (res, 'errors/', 'POST', {picture:{__type:"Pointer",className:"picture",objectId:objectId},count:{__op:'Increment',amount:1}})
-	  }
-	})
+	const answer = req.query.answer
+	restful (res, 'errors/', 'POST', {movie:{__type:"Pointer",className:"movie",objectId:objectId},status: 1, userAnswer: answer})
 })
 
 // 给剧照评难度
@@ -347,6 +367,14 @@ app.get('/gamelog/:objid', function (req, res) {
 // 映射到首页
 app.get('/', function (req, res) {
    res.sendFile( __dirname + "/index.html" )
+})
+
+// 答案匹配
+app.get('/answerMatch', function (req, res) {
+	let answer = req.query.answer.replace(/[\s-!\?:]/g, '').toLowerCase() // 格式化用户输入的答案
+	let isMatch = Utils.answerMatch(answer, movie) // 执行匹配函数
+	movie.isMatch = isMatch
+  res.end(JSON.stringify(movie))
 })
 
 module.exports = app
