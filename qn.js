@@ -15,7 +15,7 @@ const qn_url = Conf.qiniu.url
 // 生成图片名称
 function upkey () {
 	const d = new Date()
-	return `gm-${d.getTime().jpg}`
+	return `gm-${d.getTime()}.jpg`
 }
 
 //在线上传

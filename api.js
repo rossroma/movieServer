@@ -190,6 +190,10 @@ app.get('/rd-pic', function (req, res) {
 	}
 	request(options, function (error, response, data) {
 		if (showError(error, data)) return
+		if (!data.results || !data.results.length) {
+			showError(error, data)
+			return
+		}
 		data = data.results[0]
 		movie = data.movie
 		let picture = Object.assign(data, {})
